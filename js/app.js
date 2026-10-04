@@ -840,11 +840,6 @@
               (d.system ? '<span class="lock" title="ลบไม่ได้">' + ic('lock', 'icon-sm') + 'ระบบ</span>' : '<button class="btn btn-sm btn-ghost icon-btn" data-act="del-det" data-id="' + esc(d.id) + '" aria-label="ลบ ' + esc(d.name) + '">' + ic('trash', 'icon-sm') + '</button>') + '</li>').join('') + '</ul>' +
             '<form class="add-row one" id="det-form" novalidate><div class="field"><label class="sr-only" for="nd">ชื่อ Process Detail ใหม่</label><input class="input" id="nd" placeholder="เพิ่ม Process Detail ใหม่"></div><button class="btn btn-primary" type="submit">' + ic('plus') + 'เพิ่ม</button><p class="error" id="nd-err" style="grid-column:1/-1"></p></form>' +
           '</section>' +
-          '<section class="card card-pad" aria-labelledby="s-data"><div class="card-head"><h2 id="s-data">' + ic('database') + 'ข้อมูล</h2></div>' +
-            '<div class="notice">' + ic('info') + '<span>ข้อมูลเก็บในฐานข้อมูลกลาง (Cloudflare D1) ทุกเครื่องเห็นข้อมูลเดียวกัน และอัปเดตอัตโนมัติทุก 8 วินาที · หน้าจอแสดงประวัติย้อนหลัง 30 วัน</span></div>' +
-            '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">' +
-              '<button class="btn btn-danger" data-act="clear-data">' + ic('trash') + 'ล้างรายการตรวจทั้งหมด</button>' +
-            '</div></section>' +
         '</div>' +
       '</div>';
   }
@@ -1379,11 +1374,6 @@
       case 'retry':
         app.innerHTML = loadingHTML(false);
         S.retry().then(() => { user = S.me() || user; render(); }).catch((err) => { if (err.code !== 'auth') app.innerHTML = loadingHTML(true); });
-        break;
-      case 'clear-data':
-        if (await confirmBox({ title: 'ล้างรายการตรวจทั้งหมด?', message: 'รายการรอตรวจและประวัติทั้งหมดจะถูกลบ และกู้คืนไม่ได้ (พนักงานและการตั้งค่ายังอยู่)', ok: 'ล้างข้อมูล', danger: true })) {
-          S.clearRequests(); toast('ok', 'ล้างรายการตรวจแล้ว');
-        }
         break;
       case 'skip': e.preventDefault(); { const p = $('#page'); if (p) p.focus(); } break;
     }

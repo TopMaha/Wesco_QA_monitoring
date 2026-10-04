@@ -301,10 +301,6 @@
     updateSettings(patch) {
       Object.assign(state.settings, patch);
       emit('change'); send('updateSettings', state.settings);
-    },
-    clearRequests() {
-      state.requests = [];
-      emit('change'); send('clearRequests', {});
     }
   };
 

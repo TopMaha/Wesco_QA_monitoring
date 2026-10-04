@@ -338,14 +338,6 @@ async function action(req, env) {
       await env.DB.batch([putKV(env, 'settings', { leadMin: lead, maxInspectMin: max }), bump(env)]);
       return done();
     }
-    case 'clearRequests': {
-      if (!isAdmin) throw forbidden();
-      await env.DB.batch([
-        env.DB.prepare('DELETE FROM requests'), env.DB.prepare('DELETE FROM photos'),
-        env.DB.prepare("UPDATE kv SET v = CAST(v AS INTEGER) + 1 WHERE k = 'epoch'"), bump(env)
-      ]);
-      return done();
-    }
     default:
       throw bad('ไม่รู้จักคำสั่ง ' + String(b.type));
   }

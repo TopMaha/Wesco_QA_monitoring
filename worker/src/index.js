@@ -11,6 +11,7 @@
  * Every write bumps kv.version so clients can poll cheaply.
  * ========================================================================= */
 
+const VERSION = '1.1.0';
 const DAY = 86400000;
 const HISTORY_DAYS = 31;       // clients receive active rows + last 31 days
 const TOKEN_TTL = 60 * DAY;
@@ -59,7 +60,7 @@ function corsHeaders(req, env) {
 async function route(req, env) {
   const url = new URL(req.url);
   const p = url.pathname.replace(/\/+$/, '');
-  if (p === '/api/health') return json({ ok: true, time: Date.now() });
+  if (p === '/api/health') return json({ ok: true, version: VERSION, time: Date.now() });
   if (p === '/api/login' && req.method === 'POST') return login(req, env);
   if (p === '/api/sync' && req.method === 'GET') return sync(req, env, url);
   if (p === '/api/action' && req.method === 'POST') return action(req, env);

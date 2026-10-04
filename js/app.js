@@ -7,6 +7,7 @@
 
   const S = window.Store;
   const MIN = S.MIN;
+  const VERSION = (window.APP_CONFIG && window.APP_CONFIG.VERSION) || '';
 
   const app = document.getElementById('app');
   const dlg = document.getElementById('modal');
@@ -247,6 +248,7 @@
             '<p class="error" id="lg-err" role="alert"></p></div>' +
           '<button class="btn btn-primary btn-lg btn-block" type="submit" id="lg-btn">' + ic('login') + 'เข้าสู่ระบบ</button>' +
         '</form>' +
+        '<p class="app-ver">v' + esc(VERSION) + '</p>' +
       '</div></main></div>';
   }
 
@@ -345,6 +347,7 @@
         notifBtn +
         '<button role="menuitem" data-act="tv">' + ic('monitor') + 'โหมดจอ TV</button>' +
         '<button role="menuitem" class="danger" data-act="logout">' + ic('logout') + 'ออกจากระบบ</button>' +
+        '<div class="ver">QA Inspection Monitor v' + esc(VERSION) + '</div>' +
       '</div>' +
       '<main id="page" tabindex="-1"></main>' +
       '<nav class="bottom-nav" aria-label="เมนูหลัก">' +
@@ -1119,7 +1122,7 @@
             : '<div class="tv-empty">ไม่มีงานรอตรวจ · No pending inspection</div>') +
         '</div>' +
         '<footer class="tv-foot"><span id="tv-date"></span><span id="tv-page"></span>' +
-          '<span class="tv-btns"><button class="btn btn-sm" data-act="fullscreen">' + ic('monitor', 'icon-sm') + 'เต็มจอ</button>' +
+          '<span class="tv-btns"><span class="tv-ver">v' + esc(VERSION) + '</span><button class="btn btn-sm" data-act="fullscreen">' + ic('monitor', 'icon-sm') + 'เต็มจอ</button>' +
           '<a class="btn btn-sm" href="#/board">' + ic('x', 'icon-sm') + 'ออก (Esc)</a></span></footer>' +
       '</div>';
   }
@@ -1335,6 +1338,7 @@
       case 'menu': e.stopPropagation(); toggleMenu(); break;
       case 'logout': logout(); break;
       case 'tv': location.hash = '#/tv'; break;
+      case 'reload': location.reload(); break;
       case 'fullscreen':
         try { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); } catch (err) { /* unsupported */ }
         break;
@@ -1401,6 +1405,25 @@
   let rz; window.addEventListener('resize', () => { if (page !== 'tv') return; clearTimeout(rz); rz = setTimeout(tvLayout, 150); });
 
   /* ================================================================ boot */
+  /* ================================================================ new-version check */
+  // screens left open (e.g. the TV) learn about a new deploy by re-reading config.js
+  let newVersion = null;
+  async function checkVersion() {
+    try {
+      const txt = await (await fetch('js/config.js?check=' + Date.now(), { cache: 'no-store' })).text();
+      const m = /VERSION:\s*'([^']+)'/.exec(txt);
+      if (!m || !VERSION || m[1] === VERSION || m[1] === newVersion) return;
+      newVersion = m[1];
+      const el = document.getElementById('update');
+      el.innerHTML = 'มีเวอร์ชันใหม่ v' + esc(newVersion) + (page === 'tv' ? ' — กำลังอัปเดต…' : '') +
+        ' <button class="btn btn-sm" data-act="reload">อัปเดตเลย</button>';
+      el.hidden = false;
+      if (page === 'tv') setTimeout(() => location.reload(), 10000); // unattended screen: update itself
+    } catch (e) { /* offline — try next time */ }
+  }
+  setInterval(checkVersion, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkVersion(); });
+
   // this URL previously hosted another app with a service worker — remove it
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister())).catch(() => {});

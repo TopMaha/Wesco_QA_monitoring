@@ -569,3 +569,10 @@ body:has(dialog[open]) { overflow: hidden; }
 .boot-msg { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--ink-2); margin: 8px 0 0; }
 .spinner.dark { width: 20px; height: 20px; border: 2px solid var(--mint-200); border-top-color: var(--primary); border-radius: 50%; animation: spin .7s linear infinite; display: inline-block; }
 .net-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 1100; background: #b42318; color: #fff; text-align: center; font-size: 14px; font-weight: 600; padding: 6px 12px; }
+
+/* ---------- version ---------- */
+.app-ver { text-align: center; color: var(--muted); font-size: 12px; font-family: var(--mono); margin: 28px 0 0; }
+.menu .ver { padding: 8px 12px 4px; font-size: 12px; color: var(--muted); font-family: var(--mono); border-top: 1px solid var(--border); margin-top: 6px; }
+.update-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 1101; display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; background: var(--primary); color: #fff; font-size: 14px; font-weight: 600; padding: 6px 12px; }
+.update-banner .btn { --b-bg: #fff; --b-ink: var(--primary-ink); --b-bd: #fff; min-height: 32px; }
+.tv-ver { font-size: 14px; opacity: .7; }

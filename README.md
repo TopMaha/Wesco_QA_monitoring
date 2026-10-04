@@ -1,90 +1,53 @@
-# CountGD — นับชิ้นงานจากกล้องสด + รูปถ่าย
+# Wesco QA Inspection Monitor
 
-PWA นับจำนวนชิ้นงานในโรงงาน **ไม่ต้องเทรนโมเดลใหม่** — แค่วาดกรอบตัวอย่าง (visual exemplar) ชิ้นที่ต้องการ ระบบจะหาชิ้นที่เหมือนกันทั้งภาพแล้วนับให้
+ระบบติดตามงานรอ QA ตรวจ — ใช้ได้ทั้งมือถือและคอมพิวเตอร์ ทุกเครื่องเห็นข้อมูลเดียวกัน
 
-แนวคิด: **Open-World / Few-shot Exemplar Counting** แทน YOLO ธรรมดา (ที่ต้องเก็บ dataset + เทรนใหม่ทุกครั้งที่ชิ้นงานเปลี่ยน)
+- **เว็บแอป:** https://topmaha.github.io/Wesco_QA_monitoring/
+- **API:** https://wesco-qa-api.wiphawas-sketchup.workers.dev (Cloudflare Worker + D1)
 
-## สถาปัตยกรรม 2 ชั้น (Hybrid)
+## การใช้งาน
 
-| ชั้น | ทำงานที่ไหน | ความเร็ว | ใช้เมื่อไหร่ |
-|------|------------|----------|-------------|
-| 🟢 **Live Count** | ในเบราว์เซอร์ (opencv.js) | ~15–30 fps | เล็งกล้อง → เห็นเลขทันที ไม่กินค่า GPU |
-| 🔵 **Verify Count** | GPU endpoint (CountGD) | ~1–3 วิ/เฟรม | กดยืนยัน / ภาพนิ่ง → ได้เลขแม่นสูงสุด |
+1. เข้าสู่ระบบด้วย **รหัสพนักงาน** (ไม่มีรหัสผ่าน) — Admin เพิ่ม/ลบพนักงานได้ที่หน้า **ตั้งค่า**
+2. **แจ้งงานตรวจ:** Date Received, Job No., Product, Process, Process Detail, Plan to inspection, Remark/รูป (ถ้ามี)
+3. **บอร์ดติดตาม:** นับถอยหลังถึงคิวตรวจ, แจ้งเตือนก่อน 30 นาที, ถึงเวลาแล้ว QA กด **ยอมรับ** หรือ **Reject · เลื่อนเวลา**
+4. **ลงผลตรวจ:** OK → ออกจากบอร์ด · NG → ใส่สาเหตุ และระบบสร้างรอบตรวจซ้ำจนกว่าจะผ่าน
+5. **1st piece** ต้องตรวจ **Last piece** ผ่านจึงปิด Job ได้
+6. **โหมดจอ TV** สำหรับจอหน้างาน (เมนูผู้ใช้ → โหมดจอ TV)
 
-> **"สด + แม่น + นับอะไรก็ได้" พร้อมกันในโมเดลเดียวทำไม่ได้** — โมเดลแม่นสุด (CountGD) รันบน GPU ช้าเกินสำหรับวิดีโอสด จึงแยกเป็นชั้นสดเร็วบนเครื่อง + ชั้นยืนยันแม่นบน server
+| สิทธิ์ | ทำอะไรได้ |
+|---|---|
+| Production | แจ้งงานตรวจ, ดูบอร์ด/ประวัติ, ยกเลิกงานที่ตัวเองแจ้ง |
+| QA Inspector | + ยอมรับ / เลื่อนเวลา / ลงผลตรวจ |
+| Admin | + ตั้งค่าพนักงาน, Process, Process Detail, เวลาแจ้งเตือน |
 
-## สถานะ (เฟสที่ทำเสร็จ)
+## โครงสร้าง
 
-- ✅ **เฟส 1–2** PWA shell + กล้องสด: เปิดกล้อง → เห็นเลขนับ realtime + temporal smoothing (median 5 เฟรม) + ไฟสถานะนิ่ง/ขยับ
-- ✅ **เฟส 3** โหมดถ่ายรูป/อัปโหลด + วาดกรอบ exemplar (touch + mouse)
-- ✅ **เครื่องนับ on-device** exemplar-guided: วัดขนาด+สีจากกรอบที่วาด → หาชิ้นที่เหมือน (opencv.js contour/blob + NMS de-dup)
-- ✅ **เฟส 6** หน้าผลลัพธ์ + แก้มือ (+1/−1) + slider เกณฑ์ความมั่นใจ + Export PNG/CSV
-- ✅ **เฟส 8** คลังชิ้นงาน (Reference Library) เก็บใน localStorage ใช้ซ้ำได้
-- 🟡 **เฟส 4–5** Worker + R2 + D1 + CountGD GPU verify — โค้ดพร้อมใน `worker/` ยังไม่ deploy (ต้องตั้ง GPU endpoint)
-
-แอป **ใช้งานได้จริงทันทีแบบ on-device** โดยไม่ต้อง deploy server — ชั้น verify เป็นทางเลือกเสริมเพื่อความแม่นสูงสุด
-
-## รันแอป (frontend)
-
-ทุกอย่างเป็น static files — เปิดด้วย web server ใดก็ได้:
-
-```bash
-npx http-server . -p 5500
-# เปิด http://localhost:5500 (ต้องใช้ HTTPS หรือ localhost เพื่อให้กล้องทำงาน)
+```
+index.html          หน้าเว็บ (GitHub Pages)
+css/app.css         ธีมขาว-เขียวอ่อน
+js/config.js        URL ของ API
+js/store.js         ชั้นข้อมูล: sync กับ API ทุก 8 วินาที, optimistic update
+js/app.js           UI ทั้งหมด (บอร์ด, ฟอร์ม, ประวัติ, ตั้งค่า, TV)
+assets/             โลโก้ Wesco
+worker/             Cloudflare Worker (API) + schema.sql ของ D1
+sw.js               ล้าง service worker ของแอปเก่าที่เคยอยู่ใน URL นี้
 ```
 
-Deploy ขึ้น **GitHub Pages** / **Cloudflare Pages** ได้เลย (เป็น static)
-
-### การใช้งาน
-1. **กล้องสด** — เล็งชิ้นงาน เห็นเลขทันที, ปรับ slider ความไว/ขนาด, แตะ "โหมดสี" แล้วแตะชิ้นงานเพื่อนับเฉพาะสีนั้น, กดชัตเตอร์/ยืนยันเพื่อ freeze + นับละเอียด
-2. **ถ่ายรูป** — เลือก/ถ่ายรูป → ลากกรอบรอบชิ้นตัวอย่าง 1–5 ชิ้น (เลือกขนาด/มุมต่างกัน) → กดนับ
-3. **ผลลัพธ์** — แตะรูปเพื่อเพิ่ม/ลบจุด, เลื่อน slider เกณฑ์, Export, บันทึกลงคลัง
-
-## Verify layer (เฟส 4–5) — เปิดเมื่อต้องการความแม่นสูงสุด
-
-โค้ด Worker อยู่ใน [`worker/`](worker/) (Hono + D1 + R2). ขั้นตอน deploy:
+## Deploy API (Cloudflare)
 
 ```bash
 cd worker
 npm install
-wrangler d1 create countgd          # ใส่ database_id ลง wrangler.toml
-wrangler r2 bucket create countgd-images
-npm run db:init:remote              # สร้างตาราง
-wrangler secret put HF_TOKEN        # (ถ้าใช้ HF Space แบบ private)
-npm run deploy
+npx wrangler d1 execute wesco-qa --remote --file=./schema.sql   # สร้างตาราง (รันซ้ำได้)
+npx wrangler deploy
 ```
 
-จากนั้นในไฟล์ [`app.js`](app.js) ตั้ง `CONFIG.API_BASE` เป็น URL ของ Worker → แอปจะส่งภาพไป verify ด้วย **CountGD** บน GPU อัตโนมัติเมื่อกดยืนยัน/ภาพนิ่ง
+ตั้งค่าครั้งแรก: `npx wrangler secret put TOKEN_SECRET` (สตริงสุ่ม ใช้เซ็น token เข้าระบบ)
 
-GPU endpoint รองรับ 3 แบบ (ตั้งใน `wrangler.toml` → `COUNTGD_PROVIDER`):
-- `hf_space` — Hugging Face Space (default: `nikigoli/countgd`, rate-limited; deploy เองสำหรับ production)
-- `replicate` — deploy CountGD เป็น custom model
-- `custom` — RunPod serverless / GPU ของตัวเอง
+หน้าเว็บ deploy อัตโนมัติผ่าน GitHub Pages เมื่อ push ขึ้น `main`
 
-> CountGD: *Multi-Modal Open-World Counting* (NeurIPS 2024, Oxford VGG) — รับทั้ง text + visual exemplar = SOTA บน FSC-147 / CARPK
-> Repo: https://github.com/niki-amini-naieni/CountGD · Demo: https://huggingface.co/spaces/nikigoli/countgd
+## หมายเหตุ
 
-## เทคนิคความแม่นยำที่ใส่ไว้แล้ว
-- Temporal smoothing (median) กันเลขกระพริบในโหมดสด
-- Frame-diff motion detection → freeze เฉพาะตอนภาพนิ่ง + auto-verify
-- NMS / distance de-dup กันนับซ้ำ
-- Exemplar-guided size + HSV color band (นับเฉพาะชิ้นที่เหมือนตัวอย่าง)
-- Full-resolution capture ตอนยืนยัน (ชิ้นเล็กยังนับได้)
-- Confidence จากความสม่ำเสมอของขนาดชิ้น
-- Calibration loop ฝั่ง server: เก็บผลแก้มือ → ปรับ threshold อัตโนมัติ
-
-## โครงสร้าง
-```
-index.html      # PWA shell + UI (ภาษาไทย)
-app.js          # counting engine + camera + annotate + results + library
-sw.js           # service worker (offline shell + cache opencv.js)
-manifest.json   # PWA manifest
-icon.svg / icon-*.png
-worker/         # Cloudflare Worker (verify layer) — Hono + D1 + R2 + CountGD proxy
-```
-
-## โรดแมปต่อ
-- เฟส 7: Tiling สำหรับภาพหนาแน่น (>100 ชิ้น) แบ่งกริด + de-dup รอยต่อ
-- ONNX Runtime Web (YOLO11n) เป็นทางเลือกชั้น 1 สำหรับงานที่ blob ไม่พอ
-- Claude Vision cross-check ตอนจำนวนน้อย
-- Reference Library sync ขึ้น D1/R2 (ตอนนี้อยู่ localStorage)
+- หน้าจอโหลดรายการที่ยังค้าง + ประวัติย้อนหลัง 31 วัน (ข้อมูลเก่ากว่านั้นยังอยู่ในฐานข้อมูล)
+- รูปถ่ายถูกย่อเหลือไม่เกิน 1024px แล้วเก็บใน D1
+- แอปเดิม (CountGD) เก็บไว้ที่ branch `countgd-archive`

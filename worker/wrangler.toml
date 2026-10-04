@@ -1,27 +1,16 @@
-name = "countgd"
-main = "src/index.ts"
-compatibility_date = "2024-09-23"
-compatibility_flags = ["nodejs_compat"]
+name = "wesco-qa-api"
+main = "src/index.js"
+compatibility_date = "2025-09-01"
+workers_dev = true
 
-# D1 — metadata (jobs, part types, feedback)
 [[d1_databases]]
 binding = "DB"
-database_name = "countgd"
-database_id = "REPLACE_WITH_D1_ID"   # wrangler d1 create countgd
-
-# R2 — original frames + annotated result images
-[[r2_buckets]]
-binding = "BUCKET"
-bucket_name = "countgd-images"        # wrangler r2 bucket create countgd-images
+database_name = "wesco-qa"
+database_id = "7e796331-5700-4bb5-8c0e-4fd96860803c"
 
 [vars]
-# GPU inference endpoint for the CountGD verify layer (Phase 5).
-# Point this at a Hugging Face Space (Gradio), Replicate, or your own GPU service.
-# Default below is the public CountGD HF Space (rate-limited; deploy your own for production).
-COUNTGD_PROVIDER = "hf_space"                       # "hf_space" | "replicate" | "custom"
-COUNTGD_HF_SPACE = "nikigoli/countgd"
+# Origins allowed to call the API (GitHub Pages + local preview)
+ALLOWED_ORIGINS = "https://topmaha.github.io,http://localhost:5173,http://127.0.0.1:5173"
 
-# Secrets (set with `wrangler secret put NAME`):
-#   HF_TOKEN          — Hugging Face token (for private Space / Inference Endpoint)
-#   REPLICATE_TOKEN   — if COUNTGD_PROVIDER = "replicate"
-#   COUNTGD_CUSTOM_URL — if COUNTGD_PROVIDER = "custom" (your RunPod/own GPU endpoint)
+# Secret (set once with `wrangler secret put TOKEN_SECRET`):
+#   TOKEN_SECRET — random string used to sign login tokens

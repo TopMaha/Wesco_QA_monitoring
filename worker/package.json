@@ -1,16 +1,12 @@
 {
-  "name": "countgd-worker",
+  "name": "wesco-qa-api",
   "version": "1.0.0",
   "private": true,
-  "description": "CountGD API orchestrator — stores jobs/exemplars in D1/R2 and proxies verify requests to a CountGD GPU endpoint",
+  "description": "Wesco QA Monitor API — Cloudflare Worker + D1",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "db:init": "wrangler d1 execute countgd --file=./schema.sql",
-    "db:init:remote": "wrangler d1 execute countgd --remote --file=./schema.sql"
-  },
-  "dependencies": {
-    "hono": "^4.6.3"
+    "db:init": "wrangler d1 execute wesco-qa --remote --file=./schema.sql"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"

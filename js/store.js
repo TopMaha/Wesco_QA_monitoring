@@ -18,7 +18,7 @@
   const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
   const nowISO = () => new Date().toISOString();
 
-  let state = { settings: { leadMin: 30, maxInspectMin: 30 }, employees: [], processes: [], details: [], requests: [] };
+  let state = { settings: { leadMin: 30, maxInspectMin: 30 }, employees: [], products: [], processes: [], details: [], requests: [] };
   let meta = { version: 0, epoch: 0, serverTime: 0 };
   let session = null;          // { token, user }
   let ready = false;
@@ -73,7 +73,7 @@
         d.requests.forEach((r) => map.set(r.id, r));
         state.requests = Array.from(map.values());
       }
-      state.settings = d.settings; state.employees = d.employees; state.processes = d.processes; state.details = d.details;
+      state.settings = d.settings; state.employees = d.employees; state.products = d.products || []; state.processes = d.processes; state.details = d.details;
       meta = { version: d.version, epoch: d.epoch, serverTime: d.serverTime };
       ready = true;
       emit('change');
@@ -187,7 +187,7 @@
     logout() {
       session = null; saveSession(); clearTimeout(timer);
       ready = false; meta = { version: 0, epoch: 0, serverTime: 0 };
-      state = { settings: state.settings, employees: [], processes: [], details: [], requests: [] };
+      state = { settings: state.settings, employees: [], products: [], processes: [], details: [], requests: [] };
     },
 
     /* ---------- inspection actions ---------- */
@@ -273,6 +273,16 @@
       state.employees = state.employees.filter((x) => x.id !== id);
       emit('change'); send('removeEmployee', { id });
       return null;
+    },
+    addProduct(name) {
+      if (state.products.some((p) => p.toLowerCase() === name.toLowerCase())) return 'มี Product นี้อยู่แล้ว';
+      state.products.push(name);
+      emit('change'); send('addProduct', { name });
+      return null;
+    },
+    removeProduct(name) {
+      state.products = state.products.filter((p) => p !== name);
+      emit('change'); send('removeProduct', { name });
     },
     addProcess(name) {
       if (state.processes.some((p) => p.toLowerCase() === name.toLowerCase())) return 'มี Process นี้อยู่แล้ว';

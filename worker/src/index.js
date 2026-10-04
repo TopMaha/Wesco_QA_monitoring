@@ -6,12 +6,13 @@
  *   POST /api/action         { type, ...payload }   → { ok, version }
  *   GET  /api/photo/:id                             → image
  *
- * Data model: master data (employees, processes, details, settings) lives in
+ * Data model: master data (employees, products, processes, details, settings) lives in
  * the `kv` table as JSON; each inspection round is one row in `requests`.
  * Every write bumps kv.version so clients can poll cheaply.
  * ========================================================================= */
 
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
+const DEFAULT_PRODUCTS = '["ePDU","SIM3","MF AC"]';
 const DAY = 86400000;
 const HISTORY_DAYS = 31;       // clients receive active rows + last 31 days
 const TOKEN_TTL = 60 * DAY;
@@ -108,6 +109,7 @@ async function allKV(env) {
     epoch: Number(o.epoch || 1),
     settings: JSON.parse(o.settings || '{"leadMin":30,"maxInspectMin":30}'),
     employees: JSON.parse(o.employees || '[]'),
+    products: JSON.parse(o.products || DEFAULT_PRODUCTS),
     processes: JSON.parse(o.processes || '[]'),
     details: JSON.parse(o.details || '[]')
   };
@@ -148,7 +150,7 @@ async function sync(req, env, url) {
   const { results } = await q.all();
   return json({
     ok: true, full, version: kv.version, epoch: kv.epoch, serverTime: now,
-    settings: kv.settings, employees: kv.employees, processes: kv.processes, details: kv.details,
+    settings: kv.settings, employees: kv.employees, products: kv.products, processes: kv.processes, details: kv.details,
     requests: results.map((r) => JSON.parse(r.data))
   });
 }
@@ -301,6 +303,19 @@ async function action(req, env) {
       if (e.id === user.id) throw bad('ลบบัญชีของตัวเองไม่ได้');
       if (e.role === 'admin' && kv.employees.filter((x) => x.role === 'admin').length <= 1) throw bad('ต้องมี Admin อย่างน้อย 1 คน');
       await env.DB.batch([putKV(env, 'employees', kv.employees.filter((x) => x.id !== e.id)), bump(env)]);
+      return done();
+    }
+    case 'addProduct': {
+      if (!isAdmin) throw forbidden();
+      const name = str(b.name, 60, 'ชื่อ Product', true);
+      if (kv.products.some((p) => p.toLowerCase() === name.toLowerCase())) throw conflict('มี Product นี้อยู่แล้ว');
+      kv.products.push(name);
+      await env.DB.batch([putKV(env, 'products', kv.products), bump(env)]);
+      return done();
+    }
+    case 'removeProduct': {
+      if (!isAdmin) throw forbidden();
+      await env.DB.batch([putKV(env, 'products', kv.products.filter((p) => p !== b.name)), bump(env)]);
       return done();
     }
     case 'addProcess': {

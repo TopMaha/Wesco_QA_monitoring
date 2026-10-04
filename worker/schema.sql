@@ -28,5 +28,6 @@ INSERT OR IGNORE INTO kv (k, v) VALUES
   ('epoch', '1'),
   ('settings', '{"leadMin":30,"maxInspectMin":30}'),
   ('employees', '[{"id":"T-815","name":"Wiphawas Chantakarm","role":"admin"},{"id":"E343997","name":"Jirawat Srijak","role":"qa"},{"id":"E344537","name":"Noppanai Prasomwong","role":"qa"}]'),
+  ('products', '["ePDU","SIM3","MF AC"]'),
   ('processes', '["Cutting Stripping","Crimping","Solder","Assembly","Packing"]'),
   ('details', '[{"id":"first","name":"1st piece","system":true},{"id":"job4h","name":"Job in 4 hrs."},{"id":"last","name":"Last piece","system":true},{"id":"assy","name":"Assembly"},{"id":"pack","name":"Packing"}]');

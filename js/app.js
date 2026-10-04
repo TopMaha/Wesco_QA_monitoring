@@ -72,6 +72,7 @@
     volume: '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>',
     'volume-x': '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" x2="16" y1="9" y2="15"/><line x1="16" x2="22" y1="9" y2="15"/>',
     flag: '<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/>',
+    tag: '<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
     package: '<path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
@@ -105,7 +106,7 @@
 
   /* ---------------------------------------------------------------- UI state */
   let kpiRange = 'today';
-  const boardFilter = { q: '', process: '', phase: '' };
+  const boardFilter = { q: '', product: '', process: '', phase: '' };
   const hist = { range: 'today', result: '', q: '' };
   let prefill = null;
   let flashId = null;
@@ -359,6 +360,11 @@
     closeMenu();
     if (!user) { app.innerHTML = loginHTML(); bindLogin(); return; }
     if (!S.ready) { app.innerHTML = loadingHTML(!S.online); return; }
+    if (page === 'settings' && !can.admin()) {
+      // หน้าตั้งค่าเข้าได้เฉพาะ Admin (รวมถึงพิมพ์ URL เอง หรือถูกลดสิทธิ์ระหว่างเปิดหน้าอยู่)
+      page = 'board'; history.replaceState(null, '', '#/board');
+      toast('warn', 'หน้าตั้งค่าเข้าได้เฉพาะ Admin');
+    }
     if (page === 'tv') { app.innerHTML = tvHTML(); tvLayout(); updateClocks(Date.now()); return; }
     app.innerHTML = shellHTML();
     renderPage();
@@ -391,6 +397,8 @@
           '<a class="btn btn-sm" href="#/tv" aria-label="โหมดจอ TV">' + ic('monitor', 'icon-sm') + '<span>โหมดจอ TV</span></a></div>' +
         '<div class="toolbar">' +
           '<div class="search">' + ic('search') + '<label class="sr-only" for="bf-q">ค้นหา</label><input class="input" id="bf-q" type="search" placeholder="ค้นหา Job No., Product" value="' + esc(boardFilter.q) + '"></div>' +
+          '<label class="sr-only" for="bf-prod">กรอง Product</label><select class="select" id="bf-prod"><option value="">ทุก Product</option>' +
+            S.state.products.map((p) => '<option' + (boardFilter.product === p ? ' selected' : '') + '>' + esc(p) + '</option>').join('') + '</select>' +
           '<label class="sr-only" for="bf-proc">กรอง Process</label><select class="select" id="bf-proc"><option value="">ทุก Process</option>' +
             S.state.processes.map((p) => '<option' + (boardFilter.process === p ? ' selected' : '') + '>' + esc(p) + '</option>').join('') + '</select>' +
           '<label class="sr-only" for="bf-ph">กรองสถานะ</label><select class="select" id="bf-ph">' +
@@ -441,6 +449,7 @@
   function boardList() {
     const now = Date.now(), q = boardFilter.q.trim().toLowerCase();
     return activeReqs().filter((r) => {
+      if (boardFilter.product && r.product !== boardFilter.product) return false;
       if (boardFilter.process && r.process !== boardFilter.process) return false;
       if (boardFilter.phase) {
         const ph = S.phase(r, now);
@@ -454,7 +463,7 @@
   function boardBodyHTML() {
     const now = Date.now(), list = boardList();
     if (!list.length) {
-      const filtered = boardFilter.q || boardFilter.process || boardFilter.phase;
+      const filtered = boardFilter.q || boardFilter.product || boardFilter.process || boardFilter.phase;
       return '<div class="empty">' + ic(filtered ? 'search' : 'check-circle') +
         '<b>' + (filtered ? 'ไม่พบรายการตามตัวกรอง' : 'ไม่มีงานรอตรวจในขณะนี้') + '</b>' +
         (filtered ? 'ลองล้างคำค้นหาหรือเปลี่ยนตัวกรอง' : 'งานที่แจ้งใหม่จะแสดงที่นี่ทันที') +
@@ -517,6 +526,7 @@
     }));
     let t;
     $('#bf-q').addEventListener('input', (e) => { clearTimeout(t); t = setTimeout(() => { boardFilter.q = e.target.value; $('#board-body').innerHTML = boardBodyHTML(); }, 150); });
+    $('#bf-prod').addEventListener('change', (e) => { boardFilter.product = e.target.value; $('#board-body').innerHTML = boardBodyHTML(); });
     $('#bf-proc').addEventListener('change', (e) => { boardFilter.process = e.target.value; $('#board-body').innerHTML = boardBodyHTML(); });
     $('#bf-ph').addEventListener('change', (e) => { boardFilter.phase = e.target.value; $('#board-body').innerHTML = boardBodyHTML(); });
     if (flashId) setTimeout(() => { flashId = null; }, 2500);
@@ -537,7 +547,8 @@
 
   function newPageHTML() {
     const p = prefill || {};
-    const products = Array.from(new Set(S.state.requests.slice().reverse().map((r) => r.product))).slice(0, 60);
+    // งานเดิมอาจใช้ Product ที่ถูกลบออกจากรายการไปแล้ว → ยังเลือกได้เมื่อแจ้งตรวจต่อจาก Job เดิม
+    const products = S.state.products.concat(p.product && S.state.products.indexOf(p.product) < 0 ? [p.product] : []);
     const jobs = Array.from(new Set(activeReqs().map((r) => r.jobNo).concat(S.jobsAwaitingLast().map((r) => r.jobNo))));
     const plan = p.planAt || toLocalInput(roundUp5(Date.now() + 60 * MIN));
     return '' +
@@ -554,10 +565,11 @@
             '<input class="input mono" id="f-job" name="jobNo" list="dl-jobs" autocapitalize="characters" spellcheck="false" autocomplete="off" placeholder="เช่น J2610-0421" value="' + esc(p.jobNo || '') + '" required>' +
             '<datalist id="dl-jobs">' + jobs.map((j) => '<option value="' + esc(j) + '">').join('') + '</datalist><p class="error" id="e-job"></p></div>' +
         '</div>' +
-        '<div class="field"><label for="f-prod">Product<span class="req">*</span></label>' +
-          '<input class="input" id="f-prod" name="product" list="dl-prod" autocomplete="off" placeholder="ชื่อ / รหัสสินค้า" value="' + esc(p.product || '') + '" required>' +
-          '<datalist id="dl-prod">' + products.map((x) => '<option value="' + esc(x) + '">').join('') + '</datalist><p class="error" id="e-prod"></p></div>' +
         '<div id="job-hint"></div>' +
+        '<fieldset class="fieldset"><legend>Product<span class="req">*</span></legend>' +
+          (products.length ? '<div class="chips" id="c-prod">' + chipsHTML('product', products, p.product) + '</div>'
+            : '<div class="chips" id="c-prod"></div><p class="help">ยังไม่มีรายการ Product — ให้ Admin เพิ่มที่หน้าตั้งค่า</p>') +
+          '<p class="error" id="e-prod"></p></fieldset>' +
         '<fieldset class="fieldset"><legend>Process<span class="req">*</span></legend>' +
           '<div class="chips" id="c-proc">' + chipsHTML('process', S.state.processes, p.process) + '</div><p class="error" id="e-proc"></p></fieldset>' +
         '<fieldset class="fieldset"><legend>Process Detail<span class="req">*</span></legend>' +
@@ -630,7 +642,7 @@
 
   function bindNew() {
     const form = $('#req-form');
-    const jobI = $('#f-job'), prodI = $('#f-prod'), planI = $('#f-plan');
+    const jobI = $('#f-job'), planI = $('#f-plan');
     let photo = '';
     const resetPhoto = bindPhoto('f-photo', (d) => { photo = d; });
     const checked = (n) => { const x = form.querySelector('input[name="' + n + '"]:checked'); return x ? x.value : ''; };
@@ -643,7 +655,7 @@
       const reqs = S.state.requests.filter((r) => r.jobNo === job && r.status !== 'cancelled');
       if (!reqs.length) { box.innerHTML = ''; return; }
       const st = S.jobState(job), pending = reqs.filter((r) => r.status === 'waiting' || r.status === 'inspecting');
-      if (!prodI.value.trim()) prodI.value = reqs[reqs.length - 1].product;
+      if (!checked('product')) { const pr = form.querySelector('input[name="product"][value="' + CSS.escape(reqs[reqs.length - 1].product) + '"]'); if (pr) pr.checked = true; }
       if (st === 'awaitingLast' && !pending.length) {
         box.innerHTML = '<div class="hint-box warn">' + ic('flag') + '<div>Job <b class="mono">' + esc(job) + '</b> ผ่าน ' + esc(firstNm) + ' แล้ว — ต้องตรวจ <b>' + esc(lastName) + '</b> ผ่านจึงจะปิด Job ได้ ' +
           '<button type="button" class="btn btn-sm" data-pick-last style="margin-top:6px">เลือก ' + esc(lastName) + '</button></div></div>';
@@ -679,13 +691,13 @@
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const data = {
-        dateReceived: $('#f-date').value, jobNo: jobI.value.trim().toUpperCase(), product: prodI.value.trim(),
+        dateReceived: $('#f-date').value, jobNo: jobI.value.trim().toUpperCase(), product: checked('product'),
         process: checked('process'), detail: checked('detail'), planAt: planI.value, remark: $('#f-remark').value, photo
       };
       const errs = [];
       if (!data.dateReceived) errs.push(['e-date', 'กรุณาเลือกวันที่รับงาน', $('#f-date')]);
       if (!data.jobNo) errs.push(['e-job', 'กรุณากรอก Job No.', jobI]);
-      if (!data.product) errs.push(['e-prod', 'กรุณากรอก Product', prodI]);
+      if (!data.product) errs.push(['e-prod', 'กรุณาเลือก Product', $('#c-prod')]);
       if (!data.process) errs.push(['e-proc', 'กรุณาเลือก Process', $('#c-proc')]);
       if (!data.detail) errs.push(['e-detail', 'กรุณาเลือก Process Detail', $('#c-detail')]);
       if (!data.planAt) errs.push(['e-plan', 'กรุณาระบุเวลาที่ต้องการให้ตรวจ', planI]);
@@ -696,7 +708,7 @@
       $$('.error', form).forEach((x) => { x.innerHTML = ''; });
       if (errs.length) {
         errs.forEach((x) => setErr(x[0], x[1], x[2]));
-        const first = errs[0][2]; (first.matches('.chips') ? first.querySelector('input') : first).focus();
+        const first = errs[0][2]; ((first.matches('.chips') && first.querySelector('input')) || first).focus();
         return;
       }
       const btn = $('#f-submit');
@@ -800,13 +812,11 @@
 
   /* ================================================================ SETTINGS */
   function settingsPageHTML() {
-    if (!can.admin()) {
-      return '<div class="card card-pad"><div class="empty">' + ic('lock') + '<b>เฉพาะผู้ดูแลระบบ (Admin)</b>กรุณาเข้าสู่ระบบด้วยบัญชี Admin เพื่อแก้ไขการตั้งค่า</div></div>';
-    }
+    if (!can.admin()) return ''; // render() redirects non-admins to the board
     const st = S.state;
     const roleCls = { admin: 'admin', qa: 'qa', prod: 'prod' };
     return '' +
-      '<div class="page-title"><div><h1>ตั้งค่า</h1><p>จัดการรายชื่อพนักงาน, Process, Process Detail และการแจ้งเตือน</p></div></div>' +
+      '<div class="page-title"><div><h1>ตั้งค่า</h1><p>จัดการรายชื่อพนักงาน, Product, Process, Process Detail และการแจ้งเตือน</p></div></div>' +
       '<div class="settings-grid">' +
         '<div style="display:grid;gap:16px">' +
           '<section class="card card-pad" aria-labelledby="s-emp"><div class="card-head"><h2 id="s-emp">' + ic('users') + 'พนักงาน <span class="tag">' + st.employees.length + '</span></h2></div>' +
@@ -834,6 +844,10 @@
             '</form></section>' +
         '</div>' +
         '<div style="display:grid;gap:16px">' +
+          '<section class="card card-pad" aria-labelledby="s-prod"><div class="card-head"><h2 id="s-prod">' + ic('tag') + 'Product <span class="tag">' + st.products.length + '</span></h2></div>' +
+            '<ul class="list">' + st.products.map((p) => '<li><div class="grow">' + esc(p) + '</div><button class="btn btn-sm btn-ghost icon-btn" data-act="del-prod" data-id="' + esc(p) + '" aria-label="ลบ ' + esc(p) + '">' + ic('trash', 'icon-sm') + '</button></li>').join('') + '</ul>' +
+            '<form class="add-row one" id="prod-form" novalidate><div class="field"><label class="sr-only" for="npr">ชื่อ Product ใหม่</label><input class="input" id="npr" maxlength="60" placeholder="เพิ่ม Product ใหม่"></div><button class="btn btn-primary" type="submit">' + ic('plus') + 'เพิ่ม</button><p class="error" id="npr-err" style="grid-column:1/-1"></p></form>' +
+          '</section>' +
           '<section class="card card-pad" aria-labelledby="s-proc"><div class="card-head"><h2 id="s-proc">' + ic('package') + 'Process</h2></div>' +
             '<ul class="list">' + st.processes.map((p) => '<li><div class="grow">' + esc(p) + '</div><button class="btn btn-sm btn-ghost icon-btn" data-act="del-proc" data-id="' + esc(p) + '" aria-label="ลบ ' + esc(p) + '">' + ic('trash', 'icon-sm') + '</button></li>').join('') + '</ul>' +
             '<form class="add-row one" id="proc-form" novalidate><div class="field"><label class="sr-only" for="np">ชื่อ Process ใหม่</label><input class="input" id="np" placeholder="เพิ่ม Process ใหม่"></div><button class="btn btn-primary" type="submit">' + ic('plus') + 'เพิ่ม</button><p class="error" id="np-err" style="grid-column:1/-1"></p></form>' +
@@ -858,6 +872,12 @@
       const msg = S.addEmployee({ id, name, role });
       if (msg) { err.innerHTML = ic('alert', 'icon-sm') + esc(msg); return; }
       toast('ok', 'เพิ่มพนักงานแล้ว', name + ' · ' + ROLE[role]);
+    });
+    $('#prod-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const v = $('#npr').value.trim(); if (!v) { $('#npr-err').innerHTML = ic('alert', 'icon-sm') + 'กรุณากรอกชื่อ Product'; return; }
+      const msg = S.addProduct(v); if (msg) { $('#npr-err').innerHTML = ic('alert', 'icon-sm') + esc(msg); return; }
+      toast('ok', 'เพิ่ม Product แล้ว', v);
     });
     $('#proc-form').addEventListener('submit', (e) => {
       e.preventDefault();
@@ -1365,6 +1385,9 @@
         }
         break;
       }
+      case 'del-prod':
+        if (await confirmBox({ title: 'ลบ Product?', message: 'ลบ <b>' + esc(id) + '</b> ออกจากรายการ (ไม่กระทบข้อมูลที่บันทึกไปแล้ว)', ok: 'ลบ', danger: true })) { S.removeProduct(id); toast('ok', 'ลบ Product แล้ว', id); }
+        break;
       case 'del-proc':
         if (await confirmBox({ title: 'ลบ Process?', message: 'ลบ <b>' + esc(id) + '</b> ออกจากรายการ (ไม่กระทบข้อมูลที่บันทึกไปแล้ว)', ok: 'ลบ', danger: true })) { S.removeProcess(id); toast('ok', 'ลบ Process แล้ว', id); }
         break;

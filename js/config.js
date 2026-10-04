@@ -3,6 +3,6 @@
  *           หน้าจอที่เปิดค้างไว้จะเห็นแถบ "มีเวอร์ชันใหม่" ภายใน 5 นาที
  * API_BASE — Cloudflare Worker + D1 (ดูโค้ดใน worker/) */
 window.APP_CONFIG = {
-  VERSION: '1.1.0',
+  VERSION: '1.2.0',
   API_BASE: 'https://wesco-qa-api.wiphawas-sketchup.workers.dev'
 };
